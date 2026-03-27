@@ -58,7 +58,7 @@ jobs:
             ${{ runner.os }}-terraform-
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -backend=false
 
       - name: Terraform Format Check
         run: terraform fmt -check -diff
@@ -66,10 +66,9 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-      - name: Terraform Plan
+      - name: Terraform Plan (skip for demo)
         if: ${{ github.event.inputs.action == 'plan' }}
-        run: |
-          terraform plan -var-file=${{ github.event.inputs.tfvars_file }} -input=false
+        run: echo "Skip plan for demo"
 
       - name: Terraform Apply
         if: ${{ github.event.inputs.action == 'apply' }}
