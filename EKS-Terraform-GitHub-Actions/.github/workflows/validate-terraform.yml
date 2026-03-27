@@ -22,7 +22,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: EKS-Terraform-GitHub-Actions/eks
+        working-directory: eks
 
     steps:
       - name: Checkout repository
