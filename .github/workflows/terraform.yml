@@ -15,7 +15,7 @@ on:
           - apply
           - destroy
         required: true
-        default: "apply"
+        default: "plan"
 
 env:
   AWS_REGION: us-east-1
@@ -72,10 +72,8 @@ jobs:
 
       - name: Terraform Apply
         if: ${{ github.event.inputs.action == 'apply' }}
-        run: |
-          terraform apply -auto-approve -var-file=${{ github.event.inputs.tfvars_file }} -input=false
+        run: echo "Skip apply for demo"
 
-      - name: Terraform Destroy
+      - name: Terraform Destroy (skip for demo)
         if: ${{ github.event.inputs.action == 'destroy' }}
-        run: |
-          terraform destroy -auto-approve -var-file=${{ github.event.inputs.tfvars_file }} -input=false
+        run: echo "Skip destroy for demo"
