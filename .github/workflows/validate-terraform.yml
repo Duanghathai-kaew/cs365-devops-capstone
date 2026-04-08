@@ -19,14 +19,22 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
 
-    defaults:
-      run:
-        shell: bash
-        working-directory: EKS-Terraform-GitHub-Actions/eks
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Run Go tests
+        run: go test ./...
+        working-directory: go-app
+
+      - name: Build Go application
+        run: go build -o app .
+        working-directory: go-app
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -46,16 +54,20 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+        working-directory: EKS-Terraform-GitHub-Actions/eks
 
       - name: Terraform Format Check
         run: terraform fmt -check -diff
+        working-directory: EKS-Terraform-GitHub-Actions/eks
         continue-on-error: false
 
       - name: Terraform Validate
         run: terraform validate
+        working-directory: EKS-Terraform-GitHub-Actions/eks
         continue-on-error: false
 
       - name: Terraform plan
         run: |
           terraform plan -var-file=dev.tfvars -input=false
+        working-directory: EKS-Terraform-GitHub-Actions/eks
         continue-on-error: false
