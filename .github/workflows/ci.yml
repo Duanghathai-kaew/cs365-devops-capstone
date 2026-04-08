@@ -1,10 +1,11 @@
-name: "EKS-Terraform-Plan"
+name: CI
 
 on:
-  push:
-    branches:
-      - "**"
   pull_request:
+  push:
+    branches-ignore:
+      - main
+  workflow_call:
 
 env:
   AWS_REGION: us-east-1
@@ -16,10 +17,9 @@ permissions:
   contents: read
 
 jobs:
-  terraform:
-    name: Terraform Plan
+  ci:
+    name: Build, Test, and Validate
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
       - name: Checkout repository
@@ -31,22 +31,22 @@ jobs:
           go-version: "1.22"
 
       - name: Run Go Tests
-        run: go test ./...
         working-directory: go-app
+        run: go test ./...
 
       - name: Build Go App
+        working-directory: go-app
         run: go build -o app .
-        working-directory: go-app
 
-      - name: Build Docker Image
-        run: docker build -t go-app:ci .
+      - name: Build Docker Image (immutable local tag)
         working-directory: go-app
+        run: docker build -t go-app:${{ github.sha }} .
 
       - name: Run Container Health Check
         run: |
-          docker run -d -p 8080:8080 --name test-app go-app:ci
+          docker run -d -p 8080:8080 --name test-app go-app:${{ github.sha }}
           sleep 3
-          curl -f http://localhost:8080/health
+          curl -fsS http://localhost:8080/health
           docker rm -f test-app
 
       - name: Setup Terraform
@@ -66,21 +66,17 @@ jobs:
             ${{ runner.os }}-terraform-
 
       - name: Terraform Init
-        run: terraform init
         working-directory: EKS-Terraform-GitHub-Actions/eks
+        run: terraform init
 
       - name: Terraform Format Check
-        run: terraform fmt -check -diff
         working-directory: EKS-Terraform-GitHub-Actions/eks
-        continue-on-error: false
+        run: terraform fmt -check -diff
 
       - name: Terraform Validate
+        working-directory: EKS-Terraform-GitHub-Actions/eks
         run: terraform validate
-        working-directory: EKS-Terraform-GitHub-Actions/eks
-        continue-on-error: false
 
-      - name: Terraform plan
-        run: |
-          terraform plan -var-file=dev.tfvars -input=false
+      - name: Terraform Plan
         working-directory: EKS-Terraform-GitHub-Actions/eks
-        continue-on-error: false
+        run: terraform plan -var-file=dev.tfvars -input=false -no-color
