@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "**"
+  pull_request:
 
 env:
   AWS_REGION: us-east-1
@@ -28,13 +29,24 @@ jobs:
         with:
           go-version: "1.22"
 
-      - name: Run Go tests
+      - name: Run Go Tests
         run: go test ./...
         working-directory: go-app
 
-      - name: Build Go application
+      - name: Build Go App
         run: go build -o app .
         working-directory: go-app
+
+      - name: Build Docker Image
+        run: docker build -t go-app:ci .
+        working-directory: go-app
+
+      - name: Run Container Health Check
+        run: |
+          docker run -d -p 8080:8080 --name test-app go-app:ci
+          sleep 3
+          curl -f http://localhost:8080/health
+          docker rm -f test-app
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
