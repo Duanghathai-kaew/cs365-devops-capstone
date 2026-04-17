@@ -1,0 +1,270 @@
+/* Global Styles */
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: 'Roboto', sans-serif;
+    transition: all 0.3s ease-in-out;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(120deg, #f6d365 0%, #fda085 100%);
+    color: #333;
+    transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+/* Header Styles */
+header {
+    background-color: #333;
+    color: white;
+    padding: 10px 0;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    animation: slide-down 1s ease-out;
+    transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+header nav {
+    background-color: #333;
+    transition: background-color 0.3s ease-in-out;
+}
+
+header nav ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    transition: all 0.3s ease-in-out;
+}
+
+header nav ul li {
+    margin: 0 10px;
+    transition: margin 0.3s ease-in-out;
+}
+
+header nav ul li a {
+    display: block;
+    color: white;
+    text-decoration: none;
+    padding: 10px 20px;
+    border: 1px solid #555;
+    border-radius: 5px;
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+header nav ul li a:hover,
+header nav ul li a.active {
+    background-color: #555;
+    color: #ff6347;
+    border-color: #ff6347;
+}
+
+/* Main Content Styles */
+main {
+    flex: 1;
+    padding: 20px;
+    animation: fade-in 1s ease-in-out;
+    transition: padding 0.3s ease-in-out;
+}
+
+section {
+    padding: 50px;
+    text-align: center;
+    display: none;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin: 10px;
+    background-color: #f9f9f9;
+    animation: fade-in 1s ease-in-out;
+    transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, padding 0.3s ease-in-out;
+}
+
+section.active {
+    display: block;
+}
+
+h1 {
+    margin-bottom: 20px;
+    font-size: 2.5em;
+    animation: bounce-in 1s ease-in-out;
+    transition: font-size 0.3s ease-in-out, margin-bottom 0.3s ease-in-out;
+}
+
+h2 {
+    font-size: 2em;
+    animation: zoom-in 0.5s ease-in-out;
+    transition: font-size 0.3s ease-in-out;
+}
+
+p {
+    margin: 0 auto;
+    max-width: 800px;
+    line-height: 1.6;
+    font-size: 1.1em;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Projects Section Styles */
+.projects {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    animation: fade-in 1s ease-in-out;
+    transition: justify-content 0.3s ease-in-out;
+}
+
+.project {
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 10px;
+    width: calc(33% - 40px);
+    transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s, border-color 0.3s;
+    animation: slide-up 0.5s ease;
+    background: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.project:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    background-color: #f0f0f0;
+    border-color: #bbb;
+}
+
+.project h3 {
+    margin-top: 0;
+    animation: slide-right 0.5s ease-in-out;
+    transition: margin-top 0.3s ease-in-out;
+}
+
+.project p {
+    font-size: 0.9em;
+    color: #666;
+    animation: slide-right 0.6s ease-in-out;
+    transition: font-size 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+.project a {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 8px 15px;
+    background-color: #ff6347;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.project a:hover {
+    background-color: #ff4500;
+}
+
+/* Footer Styles */
+footer {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 10px 0;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+    animation: slide-up 1s ease-out;
+    transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+footer p {
+    margin: 0;
+    transition: margin 0.3s ease-in-out;
+}
+
+/* Badge Styles */
+.badges {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: fade-in 1s ease-in-out;
+    transition: flex-wrap 0.3s ease-in-out, justify-content 0.3s ease-in-out;
+}
+
+.badges div {
+    margin: 10px;
+    transition: margin 0.3s ease-in-out;
+}
+
+/* Keyframes */
+@keyframes slide-down {
+    from {
+        transform: translateY(-100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+
+@keyframes slide-up {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes zoom-in {
+    from {
+        transform: scale(0.8);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+
+@keyframes bounce-in {
+    0% {
+        transform: scale(0.5);
+        opacity: 0.5;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes slide-right {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+/* Additional Animations */
+@keyframes hover-bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+.project:hover {
+    animation: hover-bounce 0.5s ease;
+}
