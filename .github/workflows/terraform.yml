@@ -1,21 +1,21 @@
-name: "EKS-Creation-Using-Terraform"
+name: 'EKS-Creation-Using-Terraform'
 
 on:
   workflow_dispatch:
     inputs:
       tfvars_file:
-        description: "Path to the .tfvars file"
+        description: 'Path to the .tfvars file'
         required: true
-        default: "dev.tfvars"
+        default: 'dev.tfvars'
       action:
         type: choice
-        description: "Terraform Action"
+        description: 'Terraform Action'
         options:
           - plan
           - apply
           - destroy
         required: true
-        default: "apply"
+        default: 'apply'
 
 env:
   AWS_REGION: us-east-1
@@ -34,7 +34,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: EKS-Terraform-GitHub-Actions/eks
+        working-directory: eks
 
     steps:
       - name: Checkout repository
