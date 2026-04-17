@@ -1,0 +1,143 @@
+name: CI/CD
+
+on: 
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - 'README.md'
+
+env: 
+  REGISTRY: docker.io
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+jobs:
+
+  build: 
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4.1.7
+
+    - name: Setting Up Go 1.22
+      uses: actions/setup-go@v2
+      with: 
+        go-version: 1.22
+
+    - name: Build 
+      run: go build -o go-app
+
+    - name: Test
+      run: go test ./
+
+
+  Code-Quality:
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run golang-lint
+      uses: golangci/golangci-lint-action@v6
+      with:
+        version: v1.56.2
+        
+  Docker-Image-Push: 
+    runs-on: ubuntu-latest
+
+    needs: Code-Quality
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Docker Buildx
+      uses: docker/setup-buildx-action@v3.5.0
+
+    - name: Login to Dockerhub
+      uses: docker/login-action@v3
+      with: 
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and push
+      uses: docker/build-push-action@v6.5.0
+      with:
+        path: ./Dockerfile
+        push: true
+        tags: ${{ secrets.DOCKER_USERNAME }}/go-port:${{github.run_id}}
+
+  Image-Scanning:
+      runs-on: ubuntu-latest
+      needs: Docker-Image-Push
+      
+      steps:
+      
+      - name: Login to Dockerhub
+        uses: docker/login-action@v3
+        with: 
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+        
+      - name: Docker Scout
+        id: docker-scout
+        uses: docker/scout-action@v1
+        with:
+          command: cves,recommendations
+          image: ${{ steps.meta.outputs.tags }}
+          #to: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.COMPARE_TAG }}
+          ignore-unchanged: true
+          only-severities: critical,high
+          write-comment: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+
+  Updating-helm-tags:
+      needs: Image-Scanning
+      
+      runs-on: ubuntu-latest
+      steps:
+      
+      - name: Cloning the helm repo
+        uses: GuillaumeFalourd/clone-github-repo-action@v2.3
+        with:
+          owner: 'AmanPathak-DevOps'
+          repository: 'go-app-devops'
+          access-token: ${{ secrets.REPO_PAT }}
+          branch: 'master'
+
+
+      - name: Updating values in helm
+        run: |
+          cd go-app-devops
+          ls
+          sed -i 's/tag: .*/tag: "${{github.run_id}}"/' values.yaml
+
+      - name: Pushing changes
+        run: |
+          cd go-app-devops
+          git config --global user.email "aman07pathak@gmail.com"
+          git config --global user.name "AmanPathak-DevOps"
+          git add values.yaml
+          git commit -am "Updated values.yaml file"
+          git push
+
+      
+  Slack-Notification:
+
+      runs-on: ubuntu-latest
+      needs: [build, Code-Quality, Docker-Image-Push, Image-Scanning, Updating-helm-tags]
+      steps:
+      
+      - name: Slack Notification
+        uses: act10ns/slack@v1
+        with:
+          status: ${{ job.status }}
+          steps: ${{ toJson(steps) }}
+          channel: '#go-app-github-actions'
+        if: always()
+
