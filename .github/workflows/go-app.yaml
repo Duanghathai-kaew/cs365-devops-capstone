@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - main
+      - feat/hand/ci
     paths-ignore:
       - 'README.md'
 
@@ -32,6 +33,9 @@ jobs:
     - name: Test
       working-directory: app
       run: go test ./...
+
+    - name: Build Docker image
+      run: docker build -t go-app ./app
 
 
   Code-Quality:
