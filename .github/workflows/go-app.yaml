@@ -52,7 +52,7 @@ jobs:
     - name: Run golang-lint
       uses: golangci/golangci-lint-action@v6
       with:
-        version: v1.56.2
+        version: lastest
         working-directory: app
         
   Docker-Image-Push: 
