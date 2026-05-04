@@ -89,7 +89,7 @@ jobs:
         uses: azure/setup-helm@v4
 
       - name: Helm lint
-        run: helm lint ./helm
+        run: helm lint ./helm/charts
 
       - name: Helm template
-        run: helm template go-port ./helm
+        run: helm template go-port ./helm/charts
