@@ -28,13 +28,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version-file: app/go.mod
-
-      - name: Check Go version
-        run: go version
 
       - name: Download dependencies
         run: go mod download
@@ -43,11 +40,11 @@ jobs:
         run: |
           files=$(gofmt -l .)
           if [ -n "$files" ]; then
-          echo "These files are not gofmt formatted:"
-          echo "$files"
-          exit 1
+            echo "Unformatted files:"
+            echo "$files"
+            exit 1
           fi
-          
+
       - name: Run tests
         run: go test ./...
 
