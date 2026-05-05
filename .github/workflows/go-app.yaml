@@ -157,6 +157,7 @@ jobs:
           cd go-app-devops
           git config --global user.email "github-actions@github.com"
           git config --global user.name "GitHub Actions"
+          git remote set-url origin https://${{ secrets.REPO_PAT }}@github.com/AmanPathak-DevOps/go-app-devops.git
           git add charts/values.yaml
           git commit -m "chore: update image tag to ${{ github.run_id }}"
           git push
