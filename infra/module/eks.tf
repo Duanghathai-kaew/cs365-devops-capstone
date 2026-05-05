@@ -2,7 +2,7 @@ resource "aws_eks_cluster" "eks" {
 
   count    = var.is_eks_cluster_enabled == true ? 1 : 0
   name     = var.cluster_name
-  role_arn = aws_iam_role.eks-cluster-role[count.index].arn
+  role_arn = data.aws_iam_role.labrole.arn
   version  = var.cluster_version
 
   vpc_config {
@@ -50,7 +50,7 @@ resource "aws_eks_node_group" "ondemand-node" {
   cluster_name    = aws_eks_cluster.eks[0].name
   node_group_name = "${var.cluster_name}-on-demand-nodes"
 
-  node_role_arn = aws_iam_role.eks-nodegroup-role[0].arn
+  node_role_arn = data.aws_iam_role.labrole.arn
 
   scaling_config {
     desired_size = var.desired_capacity_on_demand
@@ -84,7 +84,7 @@ resource "aws_eks_node_group" "spot-node" {
   cluster_name    = aws_eks_cluster.eks[0].name
   node_group_name = "${var.cluster_name}-spot-nodes"
 
-  node_role_arn = aws_iam_role.eks-nodegroup-role[0].arn
+  node_role_arn = data.aws_iam_role.labrole.arn
 
   scaling_config {
     desired_size = var.desired_capacity_spot
