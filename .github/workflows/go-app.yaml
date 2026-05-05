@@ -147,8 +147,10 @@ jobs:
       - name: Updating values in helm
         run: |
           cd go-app-devops
-          ls
-          sed -i 's/tag: .*/tag: "${{github.run_id}}"/' values.yaml
+          pwd
+          ls -la
+          ls -la helm/charts/ || echo "helm/charts not found, checking root:"
+          sed -i 's/tag: .*/tag: "${{ github.run_id }}"/' helm/charts/values.yaml
 
       - name: Pushing changes
         run: |
