@@ -139,7 +139,7 @@ jobs:
       - name: Cloning the helm repo
         uses: GuillaumeFalourd/clone-github-repo-action@v2.3
         with:
-          owner: "AmanPathak-DevOps"
+          owner: "Duanghathai-kaew"
           repository: "go-app-devops"
           access-token: ${{ secrets.REPO_PAT }}
           branch: "master"
@@ -159,7 +159,7 @@ jobs:
           git config user.name "GitHub Actions"
           git add charts/values.yaml
           git commit -m "chore: update image tag to ${{ github.run_id }}"
-          git push https://${{ secrets.REPO_PAT }}@github.com/AmanPathak-DevOps/go-app-devops.git HEAD:master
+          git push https://${{ secrets.REPO_PAT }}@github.com/Duanghathai-kaew/go-app-devops.git HEAD:master
 
   Deploy-To-EKS:
     name: Deploy to EKS with Helm
