@@ -136,30 +136,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      - name: Cloning the helm repo
-        uses: GuillaumeFalourd/clone-github-repo-action@v2.3
-        with:
-          owner: "Duanghathai-kaew"
-          repository: "go-app-devops"
-          access-token: ${{ secrets.REPO_PAT }}
-          branch: "master"
+      - name: Clone same repo
+        run: |
+          git clone https://${{ secrets.REPO_PAT }}@github.com/Duanghathai-kaew/cs365-devops-capstone.git
+          cd cs365-devops-capstone
 
       - name: Updating values in helm
         run: |
-          cd go-app-devops
-          pwd
-          ls -la
-          find . -name "values.yaml" -exec sed -i 's/tag: .*/tag: "${{ github.run_id }}"/' {} +
-          echo "Updated values.yaml with tag: ${{ github.run_id }}"
+          cd cs365-devops-capstone
+          sed -i 's/tag: .*/tag: "${{ github.run_id }}"/' helm/charts/values.yaml
+          echo "Updated helm/charts/values.yaml with tag: ${{ github.run_id }}"
 
       - name: Pushing changes
         run: |
-          cd go-app-devops
+          cd cs365-devops-capstone
           git config user.email "github-actions@github.com"
-          git config user.name "GitHub Actions"
-          git add charts/values.yaml
-          git commit -m "chore: update image tag to ${{ github.run_id }}"
-          git push https://${{ secrets.REPO_PAT }}@github.com/Duanghathai-kaew/go-app-devops.git HEAD:master
+          git config user.name "github-actions"
+          git add helm/charts/values.yaml
+          git commit -m "update image tag ${{ github.run_id }}" || echo "no changes"
+          git push https://${{ secrets.REPO_PAT }}@github.com/Duanghathai-kaew/cs365-devops-capstone.git HEAD:main
 
   Deploy-To-EKS:
     name: Deploy to EKS with Helm
