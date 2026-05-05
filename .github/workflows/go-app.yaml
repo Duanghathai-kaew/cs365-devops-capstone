@@ -149,8 +149,8 @@ jobs:
           cd go-app-devops
           pwd
           ls -la
-          ls -la helm/charts/ || echo "helm/charts not found, checking root:"
-          sed -i 's/tag: .*/tag: "${{ github.run_id }}"/' helm/charts/values.yaml
+          find . -name "values.yaml" -exec sed -i 's/tag: .*/tag: "${{ github.run_id }}"/' {} +
+          echo "Updated values.yaml with tag: ${{ github.run_id }}"
 
       - name: Pushing changes
         run: |
