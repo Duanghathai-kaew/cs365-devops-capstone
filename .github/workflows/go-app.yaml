@@ -48,10 +48,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Go 1.22
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22
+
       - name: Run golang-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.56.2
+          version: v1.59.1
           working-directory: app
 
   Helm-Validation:
