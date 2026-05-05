@@ -155,10 +155,10 @@ jobs:
       - name: Pushing changes
         run: |
           cd go-app-devops
-          git config --global user.email "aman07pathak@gmail.com"
-          git config --global user.name "AmanPathak-DevOps"
-          git add values.yaml
-          git commit -am "Updated values.yaml file"
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add charts/values.yaml
+          git commit -m "chore: update image tag to ${{ github.run_id }}"
           git push
 
   Deploy-To-EKS:
