@@ -163,7 +163,7 @@ jobs:
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       AWS_REGION: us-east-1
-      EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+      EKS_CLUSTER_NAME: dev-ap-medium-eks-cluster
       K8S_NAMESPACE: go-app
       RELEASE_NAME: go-portfolio
 
