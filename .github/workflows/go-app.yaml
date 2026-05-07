@@ -153,7 +153,7 @@ jobs:
           git config user.email "github-actions@github.com"
           git config user.name "github-actions"
           git add helm/charts/values.yaml
-          git commit -m "update image tag ${{ github.run_id }}" || echo "no changes"
+          git commit -m "update image tag ${{ github.run_id }} [skip ci]" || echo "no changes"
           git push https://${{ secrets.REPO_PAT }}@github.com/Duanghathai-kaew/cs365-devops-capstone.git HEAD:main
 
   Deploy-To-EKS:
