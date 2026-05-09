@@ -1,4 +1,4 @@
-FROM golang:1.22.5-alpine3.20 AS base
+FROM golang:1.22.5-alpine3.20 AS builder
 
 WORKDIR /app
 
@@ -14,8 +14,8 @@ FROM gcr.io/distroless/static-debian12:nonroot
 
 WORKDIR /app
 
-COPY --from=base /app/main .
-COPY --from=base /app/static ./static
+COPY --from=builder /app/main .
+COPY --from=builder /app/static ./static
 
 EXPOSE 8080
 
