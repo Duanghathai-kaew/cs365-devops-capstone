@@ -10,6 +10,7 @@ on:
   push:
     branches:
       - main
+
     paths-ignore:
       - "README.md"
 
@@ -22,7 +23,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  application-ci:
+  Application-build:
     name: Go App CI
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -94,11 +95,11 @@ jobs:
         if: always()
         run: docker rm -f go-port-test
 
-  helm-ci:
+  Helm-Validation:
     name: Helm CI
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: application-ci
+    needs: Application-build
 
     steps:
       - name: Checkout repository
@@ -113,11 +114,11 @@ jobs:
       - name: Helm template validate
         run: helm template go-portfolio ./helm/charts
 
-  terraform-ci:
+  Terraform-CI:
     name: Terraform CI
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: application-ci
+    needs: Application-build
 
     defaults:
       run:
@@ -141,13 +142,13 @@ jobs:
       - name: Terraform validate
         run: terraform validate
 
-  docker-image-push:
+  Docker-Image-Push:
     name: Docker Image Push
     runs-on: ubuntu-latest
     needs:
-      - application-ci
-      - helm-ci
-      - terraform-ci
+      - Application-build
+      - Helm-Validation
+      - Terraform-CI
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
@@ -171,10 +172,10 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/go-port:${{ github.run_id }}
 
-  image-scanning:
+  Image-Scanning:
     name: Image Scanning
     runs-on: ubuntu-latest
-    needs: docker-image-push
+    needs: Docker-Image-Push
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
@@ -194,10 +195,10 @@ jobs:
           write-comment: false
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-  updating-helm-tags:
+  Updating-helm-tags:
     name: Updating Helm Tags
     runs-on: ubuntu-latest
-    needs: image-scanning
+    needs: Image-Scanning
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
@@ -221,10 +222,10 @@ jobs:
           git commit -m "update image tag ${{ github.run_id }} [skip ci]" || echo "no changes"
           git push https://${{ secrets.REPO_PAT }}@github.com/Duanghathai-kaew/cs365-devops-capstone.git HEAD:main
 
-  deploy-to-eks:
+  Deploy-To-EKS:
     name: Deploy to EKS with Helm
     runs-on: ubuntu-latest
-    needs: updating-helm-tags
+    needs: Updating-helm-tags
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     env:
@@ -271,17 +272,17 @@ jobs:
             -n "${K8S_NAMESPACE}" \
             --timeout=300s
 
-  slack-notification:
+  Slack-Notification:
     name: Slack Notification
     runs-on: ubuntu-latest
     needs:
-      - application-ci
-      - helm-ci
-      - terraform-ci
-      - docker-image-push
-      - image-scanning
-      - updating-helm-tags
-      - deploy-to-eks
+      - Application-build
+      - Helm-Validation
+      - Terraform-CI
+      - Docker-Image-Push
+      - Image-Scanning
+      - Updating-helm-tags
+      - Deploy-To-EKS
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
