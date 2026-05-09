@@ -5,16 +5,20 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.49.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
   }
-  backend "s3" {
-    bucket         = "dev-aman-tf-bucket"
-    region         = "us-east-1"
-    key            = "eks/terraform.tfstate"
-    dynamodb_table = "Lock-Files"
-    encrypt        = true
+  backend "local" {
+    path = "terraform.tfstate"
   }
 }
 
 provider "aws" {
-  region = var.aws-region
+  region = var.aws_region
 }

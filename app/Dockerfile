@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine AS base
+FROM golang:1.22.5-alpine3.20 AS base
 
 WORKDIR /app
 
@@ -8,9 +8,9 @@ COPY go.mod ./
 RUN go mod download
 
 COPY . .
-RUN go build -o main .
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o main .
 
-FROM gcr.io/distroless/base
+FROM gcr.io/distroless/static-debian12:nonroot
 
 WORKDIR /app
 
