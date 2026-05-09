@@ -4,6 +4,9 @@ permissions:
   contents: read
   pull-requests: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   workflow_dispatch:
 
@@ -36,6 +39,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: app/go.mod
+          cache-dependency-path: app/go.sum
 
       - name: Download dependencies
         run: go mod download
@@ -91,7 +95,7 @@ jobs:
       - name: Stop container
         if: always()
         run: docker rm -f go-port-test
-        
+
   helm-ci:
     name: Helm CI
     runs-on: ubuntu-latest
