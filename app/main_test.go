@@ -1,27 +1,47 @@
 package main
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
-func TestStaticFileServer(t *testing.T) {
-	// Create a test server using the same handler as main
-	fs := http.FileServer(http.Dir("static"))
-	handler := http.StripPrefix("/", fs)
-	server := httptest.NewServer(handler)
+func TestHealthHandlerUnit(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	rec := httptest.NewRecorder()
+
+	healthHandler(rec, req)
+
+	resp := rec.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read response body: %v", err)
+	}
+
+	if strings.TrimSpace(string(body)) != "ok" {
+		t.Fatalf("expected body ok, got %q", string(body))
+	}
+}
+
+func TestStaticFileServerIntegration(t *testing.T) {
+	server := httptest.NewServer(newRouter())
 	defer server.Close()
 
-	// Test GET request to root path
 	resp, err := http.Get(server.URL + "/")
 	if err != nil {
-		t.Fatalf("Failed to make GET request: %v", err)
+		t.Fatalf("failed to make GET request: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Check if status code is 200 OK
 	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+		t.Errorf("expected status 200, got %d", resp.StatusCode)
 	}
 }
