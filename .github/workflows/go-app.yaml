@@ -61,11 +61,13 @@ jobs:
 
       - name: Build Go app
         run: go build -v ./...
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+      - uses: actions/setup-go@v5
         with:
-          version: v1.61.0
+          go-version-file: app/go.mod
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
           working-directory: app
           skip-cache: true
 
@@ -125,12 +127,14 @@ jobs:
 
       - name: Build Go backend
         run: go build -v ./...
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+      - uses: actions/setup-go@v5
         with:
-          version: v1.61.0
-          working-directory: backend
+          go-version-file: app/go.mod
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+          working-directory: app
           skip-cache: true
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
