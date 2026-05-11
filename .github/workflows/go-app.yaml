@@ -180,11 +180,24 @@ jobs:
       - name: Setup Helm
         uses: azure/setup-helm@v4
 
+      - name: Select Helm values file
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            echo "VALUES_FILE=values-prod.yaml" >> $GITHUB_ENV
+          elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
+            echo "VALUES_FILE=values-staging.yaml" >> $GITHUB_ENV
+          else
+            echo "VALUES_FILE=values-dev.yaml" >> $GITHUB_ENV
+          fi
       - name: Helm lint
-        run: helm lint ./helm/charts
+        run: |
+          helm lint ./helm/charts \
+            -f ./helm/charts/${VALUES_FILE}
 
       - name: Helm template validate
-        run: helm template go-app-platform ./helm/charts
+        run: |
+          helm template go-app-platform ./helm/charts \
+            -f ./helm/charts/${VALUES_FILE}
 
   Terraform-CI:
     name: Terraform CI
