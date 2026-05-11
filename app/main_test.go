@@ -16,11 +16,11 @@ func TestHealthHandlerUnit(t *testing.T) {
 
 	resp := rec.Result()
 	defer func() {
-    err := resp.Body.Close()
-    if err != nil {
-        t.Log(err)
-    }
-}()
+		err := resp.Body.Close()
+		if err != nil {
+			t.Log(err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected status 200, got %d", resp.StatusCode)
@@ -44,11 +44,11 @@ func TestPingHandlerUnit(t *testing.T) {
 
 	resp := rec.Result()
 	defer func() {
-    err := resp.Body.Close()
-    if err != nil {
-        t.Log(err)
-    }
-}()
+		err := resp.Body.Close()
+		if err != nil {
+			t.Log(err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected status 200, got %d", resp.StatusCode)
@@ -73,11 +73,11 @@ func TestStaticFileServerIntegration(t *testing.T) {
 		t.Fatalf("failed to make GET request: %v", err)
 	}
 	defer func() {
-    err := resp.Body.Close()
-    if err != nil {
-        t.Log(err)
-    }
-}()
+		err := resp.Body.Close()
+		if err != nil {
+			t.Log(err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected status 200, got %d", resp.StatusCode)
@@ -93,11 +93,11 @@ func TestHealthEndpointIntegration(t *testing.T) {
 		t.Fatalf("failed to call /health: %v", err)
 	}
 	defer func() {
-    err := resp.Body.Close()
-    if err != nil {
-        t.Log(err)
-    }
-}()
+		err := resp.Body.Close()
+		if err != nil {
+			t.Log(err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected status 200, got %d", resp.StatusCode)
@@ -122,11 +122,11 @@ func TestNotFoundPathNegativeCase(t *testing.T) {
 		t.Fatalf("failed to call not found path: %v", err)
 	}
 	defer func() {
-    err := resp.Body.Close()
-    if err != nil {
-        t.Log(err)
-    }
-}()
+		err := resp.Body.Close()
+		if err != nil {
+			t.Log(err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected status 404, got %d", resp.StatusCode)
