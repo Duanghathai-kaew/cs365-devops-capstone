@@ -3,13 +3,11 @@ name: "EKS-Terraform-Plan"
 on:
   push:
     branches:
-      - "**"
+      - main
 
-env:
-  AWS_REGION: us-east-1
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -18,16 +16,25 @@ jobs:
   terraform:
     name: Terraform Plan
     runs-on: ubuntu-latest
-    environment: production
+    timeout-minutes: 10
+    environment: dev
 
     defaults:
       run:
         shell: bash
-        working-directory: eks
+        working-directory: infra/eks
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -40,7 +47,8 @@ jobs:
         with:
           path: |
             ~/.terraform.d/plugin-cache
-            .terraform
+            infra/eks/.terraform
+
           key: ${{ runner.os }}-terraform-${{ hashFiles('**/*.tf') }}
           restore-keys: |
             ${{ runner.os }}-terraform-
@@ -58,5 +66,11 @@ jobs:
 
       - name: Terraform plan
         run: |
-          terraform plan -var-file=dev.tfvars -input=false
+          terraform plan -var-file=dev.tfvars -out=tfplan -input=false
         continue-on-error: false
+
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: infra/eks/tfplan
