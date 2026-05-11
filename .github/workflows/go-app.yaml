@@ -185,13 +185,15 @@ jobs:
   Terraform-CI:
     name: Terraform CI
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+
     needs:
       - Application-build
       - Backend-build
 
     defaults:
       run:
+        shell: bash
         working-directory: infra/eks
 
     steps:
@@ -202,16 +204,29 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.3
+          terraform_wrapper: true
 
-      - name: Terraform init without backend
+      - name: Cache Terraform
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.terraform.d/plugin-cache
+            infra/eks/.terraform
+          key: ${{ runner.os }}-terraform-${{ hashFiles('infra/eks/**/*.tf') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-
+
+      - name: Terraform Init
         run: terraform init -backend=false
 
-      - name: Terraform format check
-        run: terraform fmt -check -recursive
+      - name: Terraform Format Check
+        run: terraform fmt -check -diff -recursive
 
-      - name: Terraform validate
+      - name: Terraform Validate
         run: terraform validate
 
+      - name: Terraform Plan
+        run: terraform plan -lock=false -var-file=dev.tfvars -input=false
   Docker-Image-Push:
     name: Docker Image Push
     runs-on: ubuntu-latest
