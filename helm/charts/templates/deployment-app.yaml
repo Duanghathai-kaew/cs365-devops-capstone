@@ -2,12 +2,12 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: go-portfolio
-  namespace: go-app
+  namespace: { { .Release.Namespace } }
   labels:
     role: go-portfolio
     env: dev
 spec:
-  replicas: {{ .Values.replicaCount }} # Use replica count from values.yaml
+  replicas: { { .Values.replicaCount } } # Use replica count from values.yaml
   selector:
     matchLabels:
       role: go-portfolio
@@ -19,7 +19,7 @@ spec:
       containers:
         - name: go-portfolio
           image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}" # Use image tag override, fallback to appVersion
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: { { .Values.image.pullPolicy } }
           ports:
             - containerPort: 8080
           resources:

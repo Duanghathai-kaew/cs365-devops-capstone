@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: go-backend
-  namespace: go-app
+  namespace: { { .Release.Namespace } }
   labels:
     role: go-backend
     env: dev
