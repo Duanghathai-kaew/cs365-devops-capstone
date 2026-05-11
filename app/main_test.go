@@ -31,6 +31,29 @@ func TestHealthHandlerUnit(t *testing.T) {
 	}
 }
 
+func TestPingHandlerUnit(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
+	rec := httptest.NewRecorder()
+
+	pingHandler(rec, req)
+
+	resp := rec.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read response body: %v", err)
+	}
+
+	if strings.TrimSpace(string(body)) != "Hello World" {
+		t.Fatalf("expected Hello World, got %q", string(body))
+	}
+}
+
 func TestStaticFileServerIntegration(t *testing.T) {
 	server := httptest.NewServer(newRouter())
 	defer server.Close()
@@ -43,5 +66,44 @@ func TestStaticFileServerIntegration(t *testing.T) {
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected status 200, got %d", resp.StatusCode)
+	}
+}
+
+func TestHealthEndpointIntegration(t *testing.T) {
+	server := httptest.NewServer(newRouter())
+	defer server.Close()
+
+	resp, err := http.Get(server.URL + "/health")
+	if err != nil {
+		t.Fatalf("failed to call /health: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read response body: %v", err)
+	}
+
+	if strings.TrimSpace(string(body)) != "ok" {
+		t.Fatalf("expected body ok, got %q", string(body))
+	}
+}
+
+func TestNotFoundPathNegativeCase(t *testing.T) {
+	server := httptest.NewServer(newRouter())
+	defer server.Close()
+
+	resp, err := http.Get(server.URL + "/not-found-page")
+	if err != nil {
+		t.Fatalf("failed to call not found path: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", resp.StatusCode)
 	}
 }
