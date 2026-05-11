@@ -1,0 +1,7 @@
+.git
+.github
+README.md
+*.md
+*_test.go
+helm
+infra

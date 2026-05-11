@@ -79,10 +79,11 @@ jobs:
       - name: E2E health check
         run: |
           for i in {1..10}; do
-            if curl -f http://localhost:8080/health; then
+            if curl -f http://localhost:8080/health && curl -f http://localhost:8080/ping; then
               echo "Health check passed"
               exit 0
             fi
+
             echo "Waiting for app to be ready..."
             sleep 3
           done
