@@ -234,7 +234,7 @@ jobs:
             ${{ runner.os }}-terraform-
 
       - name: Terraform Init
-        run: terraform init -backend=false
+        run: terraform init -reconfigure
 
       - name: Terraform Format Check
         run: terraform fmt -check -diff -recursive
@@ -244,6 +244,7 @@ jobs:
 
       - name: Terraform Plan
         run: terraform plan -lock=false -var-file=dev.tfvars -input=false
+
   Docker-Image-Push:
     name: Docker Image Push
     runs-on: ubuntu-latest

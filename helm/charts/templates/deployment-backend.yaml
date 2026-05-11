@@ -2,12 +2,12 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: go-backend
-  namespace: { { .Release.Namespace } }
+  namespace: "{{ .Release.Namespace }}"
   labels:
     role: go-backend
     env: dev
 spec:
-  replicas: { { .Values.replicaCount } } # Use replica count from values.yaml
+  replicas: "{{ .Values.replicaCount }}" # Use replica count from values.yaml
   selector:
     matchLabels:
       role: go-backend
@@ -19,7 +19,7 @@ spec:
       containers:
         - name: go-backend
           image: "{{ .Values.backendImage.repository }}:{{ .Values.backendImage.tag }}"
-          imagePullPolicy: { { .Values.image.pullPolicy } }
+          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
           ports:
             - containerPort: 8080
           resources:
