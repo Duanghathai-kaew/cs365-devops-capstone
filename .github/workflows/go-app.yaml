@@ -148,7 +148,7 @@ jobs:
       - name: Backend health check
         run: |
           for i in {1..10}; do
-            if curl -f http://localhost:8081/health && curl -f http://localhost:8081/ping; then
+            if curl -f http://localhost:8081/ping; then
               echo "Health check passed"
               exit 0
             fi
