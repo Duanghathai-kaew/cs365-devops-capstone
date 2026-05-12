@@ -400,6 +400,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
+      - name: Terraform Apply
+        working-directory: infra/eks
+        run: terraform apply -auto-approve -var-file=dev.tfvars
 
       - name: Set kubeconfig for EKS
         run: |
