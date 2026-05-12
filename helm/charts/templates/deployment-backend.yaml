@@ -7,7 +7,7 @@ metadata:
     role: go-backend
     env: dev
 spec:
-  replicas: "{{ .Values.backendReplicaCount}}"
+  replicas: { { .Values.backendReplicaCount } }
 
   selector:
     matchLabels:
