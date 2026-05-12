@@ -426,30 +426,26 @@ jobs:
       - name: Select environment values
         run: |
           if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
-            echo "VALUES_FILE=helm/charts/values-dev.yaml" >> $GITHUB_ENV
-            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
-            echo "K8S_NAMESPACE=dev" >> $GITHUB_ENV
-            echo "RELEASE_NAME=go-portfolio-dev" >> $GITHUB_ENV
-
-          elif [[ ${GITHUB_REF} == refs/heads/release/* ]]; then
-            echo "VALUES_FILE=helm/charts/values-staging.yaml" >> $GITHUB_ENV
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-            echo "K8S_NAMESPACE=staging" >> $GITHUB_ENV
-            echo "RELEASE_NAME=go-portfolio-staging" >> $GITHUB_ENV
-
-          elif [[ ${GITHUB_REF} == refs/tags/v* ]]; then
             echo "VALUES_FILE=helm/charts/values-prod.yaml" >> $GITHUB_ENV
             echo "ENVIRONMENT=production" >> $GITHUB_ENV
             echo "K8S_NAMESPACE=production" >> $GITHUB_ENV
             echo "RELEASE_NAME=go-portfolio-prod" >> $GITHUB_ENV
 
+          elif [[ "${GITHUB_REF}" == refs/heads/release/* ]]; then
+            echo "VALUES_FILE=helm/charts/values-staging.yaml" >> $GITHUB_ENV
+            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+            echo "K8S_NAMESPACE=staging" >> $GITHUB_ENV
+            echo "RELEASE_NAME=go-portfolio-staging" >> $GITHUB_ENV
+
+          else
+            echo "VALUES_FILE=helm/charts/values-dev.yaml" >> $GITHUB_ENV
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+            echo "K8S_NAMESPACE=dev" >> $GITHUB_ENV
+            echo "RELEASE_NAME=go-portfolio-dev" >> $GITHUB_ENV
           fi
 
       - name: Deploy with Helm
         env:
-          RELEASE_NAME: go-app-platform
-          VALUES_FILE: ./helm/charts/values.yaml
-          K8S_NAMESPACE: dev
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
 
         run: |
@@ -463,7 +459,6 @@ jobs:
             --set image.tag="${GITHUB_RUN_ID}" \
             --set backendImage.repository="${DOCKER_USERNAME}/go-backend" \
             --set backendImage.tag="${GITHUB_RUN_ID}"
-
       - name: Verify rollout
         run: |
           set -euo pipefail
