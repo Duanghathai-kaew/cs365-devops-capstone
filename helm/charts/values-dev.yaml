@@ -1,5 +1,4 @@
 replicaCount: 1
-
 image:
   repository: avian19/go-port
   pullPolicy: Always
