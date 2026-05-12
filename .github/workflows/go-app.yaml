@@ -410,9 +410,9 @@ jobs:
       - name: Terraform Init
         working-directory: infra/eks
         run: terraform init
-      - name: Terraform Apply
-        working-directory: infra/eks
-        run: terraform apply -auto-approve -var-file=dev.tfvars
+      # - name: Terraform Apply
+      #   working-directory: infra/eks
+      #   run: terraform apply -auto-approve -var-file=dev.tfvars
 
       - name: Set kubeconfig for EKS
         run: |
