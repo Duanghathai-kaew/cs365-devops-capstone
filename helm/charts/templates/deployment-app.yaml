@@ -6,8 +6,9 @@ metadata:
   labels:
     role: go-portfolio
     env: dev
+
 spec:
-  replicas: "{{ .Values.replicaCount }}" # Use replica count from values.yaml
+  replicas: "{{ .Values.replicaCount }}"
   selector:
     matchLabels:
       role: go-portfolio
