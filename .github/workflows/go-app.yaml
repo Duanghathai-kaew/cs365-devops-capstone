@@ -10,8 +10,8 @@ on:
   push:
     branches:
       - main
-      - release/**
-      - feat/**
+      # - release/**
+      # - feat/**
     tags:
       - "v*"
     paths-ignore:
