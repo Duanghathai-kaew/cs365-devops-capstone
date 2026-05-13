@@ -14,9 +14,13 @@ terraform {
       version = "~> 4.0"
     }
   }
-  backend "local" {
-    path = "terraform.tfstate"
-  }
+    backend "s3" {
+      bucket         = "cs365-terraform-state-kaew"
+      key            = "eks/terraform.tfstate"
+      region         = "us-east-1"
+      dynamodb_table = "terraform-lock"
+      encrypt        = true
+    }
 }
 
 provider "aws" {
