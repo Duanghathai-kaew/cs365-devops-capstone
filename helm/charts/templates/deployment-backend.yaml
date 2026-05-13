@@ -2,12 +2,13 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: go-backend
-  namespace: "{{ .Release.Namespace }}"
+  namespace: {{ .Release.Namespace }}
   labels:
     role: go-backend
     env: dev
 spec:
-  replicas: "{{ .Values.replicaCount }}" # Use replica count from values.yaml
+  replicas: {{ .Values.backendReplicaCount }}
+
   selector:
     matchLabels:
       role: go-backend

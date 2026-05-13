@@ -3,9 +3,9 @@ replicaCount: 3
 image:
   repository: avian19/go-port
   pullPolicy: Always
-  # Overrides the image tag whose default is the chart appVersion.
   tag: production
 
+backendReplicaCount: 3
 backendImage:
-  repository: yourdocker/go-backend
+  repository: avian19/go-backend
   tag: production

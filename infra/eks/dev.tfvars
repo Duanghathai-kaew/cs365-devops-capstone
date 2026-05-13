@@ -1,11 +1,14 @@
 env        = "dev"
 aws_region = "us-east-1"
 
-vpc_cidr_block        = "10.16.0.0/16"
-vpc_name              = "vpc"
-igw_name              = "igw"
-pub_subnet_count      = 3
-pub_cidr_block        = ["10.16.0.0/20", "10.16.16.0/20", "10.16.32.0/20"]
+vpc_cidr_block   = "10.16.0.0/16"
+vpc_name         = "vpc"
+igw_name         = "igw"
+pub_subnet_count = 3
+pub_cidr_block   = ["10.16.0.0/20", "10.16.16.0/20", "10.16.32.0/20"]
+# NOTE: For AWS Learner Lab, verify that these AZs are available
+# If terraform apply fails with AZ errors, update these values to match your lab's available AZs
+# You can list available AZs with: aws ec2 describe-availability-zones --query 'AvailabilityZones[*].ZoneName'
 pub_availability_zone = ["us-east-1a", "us-east-1b", "us-east-1c"]
 pub_sub_name          = "subnet-public"
 pri_subnet_count      = 3

@@ -1,480 +1,527 @@
 name: CI/CD
 
 permissions:
-  contents: read
-  pull-requests: write
+    contents: read
+    pull-requests: write
 
 on:
-  workflow_dispatch:
+    workflow_dispatch:
 
-  push:
-    branches:
-      - main
-      - release/**
-    tags:
-      - "v*"
-    paths-ignore:
-      - "README.md"
+    push:
+        branches:
+            - main
+            - release/**
+            - feat/**
+        tags:
+            - "v*"
+        paths-ignore:
+            - "README.md"
 
-  pull_request:
-    branches:
-      - main
+    pull_request:
+        branches:
+            - main
 
 env:
-  REGISTRY: docker.io
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    REGISTRY: docker.io
+    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  Application-build:
-    name: Go App CI
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    defaults:
-      run:
-        working-directory: app
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: app/go.mod
-          cache-dependency-path: app/go.sum
-
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Format check
-        run: |
-          files=$(gofmt -l .)
-          if [ -n "$files" ]; then
-            echo "Unformatted files:"
-            echo "$files"
-            exit 1
-          fi
-
-      - name: Run tests
-        run: go test -v ./...
-
-      - name: Build Go app
-        run: go build -v ./...
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: app/go.mod
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: latest
-          working-directory: app
-          skip-cache: true
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        run: docker build -t go-port:ci .
-
-      - name: Run container
-        run: docker run -d --name go-port-test -p 8080:8080 go-port:ci
-
-      - name: E2E health check
-        run: |
-          for i in {1..10}; do
-            if curl -f http://localhost:8080/health && curl -f http://localhost:8080/ping; then
-              echo "Health check passed"
-              exit 0
-            fi
-
-            echo "Waiting for app to be ready..."
-            sleep 3
-          done
-
-          echo "Health check failed"
-          docker logs go-port-test
-          exit 1
-
-      - name: Stop container
-        if: always()
-        run: docker rm -f go-port-test
-
-  Backend-build:
-    name: Backend CI
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    defaults:
-      run:
-        working-directory: backend
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
-
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Run tests
-        run: go test -v ./...
-
-      - name: Build Go backend
-        run: go build -v ./...
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: app/go.mod
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: latest
-          working-directory: app
-          skip-cache: true
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        run: docker build -t go-backend:ci .
-
-      - name: Run container
-        run: docker run -d --name go-backend-test -p 8081:8080 go-backend:ci
-
-      - name: Backend health check
-        run: |
-          for i in {1..10}; do
-            if curl -f http://localhost:8081/ping; then
-              echo "Health check passed"
-              exit 0
-            fi
-
-            echo "Waiting for backend..."
-            sleep 3
-          done
-
-          echo "Health check failed"
-          docker logs go-backend-test
-          exit 1
-
-      - name: Stop container
-        if: always()
-        run: docker rm -f go-backend-test
-
-  Helm-Validation:
-    name: Helm CI
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    needs:
-      - Application-build
-      - Backend-build
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Helm
-        uses: azure/setup-helm@v4
-
-      - name: Select Helm values file
-        run: |
-          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
-            echo "VALUES_FILE=values-prod.yaml" >> $GITHUB_ENV
-          elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
-            echo "VALUES_FILE=values-staging.yaml" >> $GITHUB_ENV
-          else
-            echo "VALUES_FILE=values-dev.yaml" >> $GITHUB_ENV
-          fi
-      - name: Helm lint
-        run: |
-          helm lint ./helm/charts \
-            -f ./helm/charts/${VALUES_FILE}
-
-      - name: Helm template validate
-        run: |
-          helm template go-app-platform ./helm/charts \
-            -f ./helm/charts/${VALUES_FILE}
-
-  Terraform-CI:
-    name: Terraform CI
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    needs:
-      - Application-build
-      - Backend-build
-
-    defaults:
-      run:
-        shell: bash
-        working-directory: infra/eks
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.9.3
-          terraform_wrapper: true
-
-      - name: Cache Terraform
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.terraform.d/plugin-cache
-            infra/eks/.terraform
-          key: ${{ runner.os }}-terraform-${{ hashFiles('infra/eks/**/*.tf') }}
-          restore-keys: |
-            ${{ runner.os }}-terraform-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: us-east-1
-      - name: Terraform Init
-        run: terraform init -reconfigure
-
-      - name: Terraform Format Check
-        run: terraform fmt -check -diff -recursive
-
-      - name: Terraform Validate
-        run: terraform validate
-
-      - name: Terraform Plan
-        run: terraform plan -lock=false -var-file=dev.tfvars -input=false
-
-  Docker-Image-Push:
-    name: Docker Image Push
-    runs-on: ubuntu-latest
-    needs:
-      - Application-build
-      - Helm-Validation
-      - Terraform-CI
-    if: github.event_name == 'push'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Dockerhub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: ./app
-          file: ./app/Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/go-port:${{ github.run_id }}
-
-  Backend-Docker-Push:
-    name: Backend Docker Push
-    runs-on: ubuntu-latest
-
-    needs:
-      - Backend-build
-      - Helm-Validation
-      - Terraform-CI
-
-    if: github.event_name == 'push'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Dockerhub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push backend
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/go-backend:${{ github.run_id }}
-
-  Image-Scanning:
-    name: Image Scanning
-    runs-on: ubuntu-latest
-    needs:
-      - Docker-Image-Push
-      - Backend-Docker-Push
-    if: github.event_name == 'push'
-
-    steps:
-      - name: Login to Dockerhub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Docker Scout
-        uses: docker/scout-action@v1
-        with:
-          command: cves
-          image: ${{ secrets.DOCKER_USERNAME }}/go-backend:${{ github.run_id }}
-          ignore-unchanged: true
-          only-severities: critical,high
-          write-comment: false
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Scan app image
-        uses: docker/scout-action@v1
-        with:
-          command: cves
-          image: ${{ secrets.DOCKER_USERNAME }}/go-port:${{ github.run_id }}
-          ignore-unchanged: true
-          only-severities: critical,high
-          write-comment: false
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-  # Updating-helm-tags:
-  #   name: Updating Helm Tags
-  #   runs-on: ubuntu-latest
-  #   needs: Image-Scanning
-  #   if: github.event_name == 'push'
-
-  #   steps:
-  #     - name: Clone same repo
-  #       run: |
-  #         git clone https://${{ secrets.REPO_PAT }}@github.com/Duanghathai-kaew/cs365-devops-capstone.git
-  #         cd cs365-devops-capstone
-
-  #     - name: Updating values in helm
-  #       run: |
-  #         cd cs365-devops-capstone
-  #         sed -i 's/tag: .*/tag: "${{ github.run_id }}"/' helm/charts/values.yaml
-  #         echo "Updated helm/charts/values.yaml with tag: ${{ github.run_id }}"
-
-  #     - name: Pushing changes
-  #       run: |
-  #         cd cs365-devops-capstone
-  #         git config user.email "github-actions@github.com"
-  #         git config user.name "github-actions"
-  #         git add helm/charts/values.yaml
-  #         git commit -m "update image tag ${{ github.run_id }} [skip ci]" || echo "no changes"
-  #         git push https://${{ secrets.REPO_PAT }}@github.com/Duanghathai-kaew/cs365-devops-capstone.git HEAD:main
-
-  Deploy-To-EKS:
-    name: Deploy to EKS with Helm
-    runs-on: ubuntu-latest
-    needs: Image-Scanning
-    if: github.event_name == 'push'
-
-    env:
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      AWS_REGION: us-east-1
-      EKS_CLUSTER_NAME: dev-ap-medium-eks-cluster
-      # K8S_NAMESPACE: go-app
-      # RELEASE_NAME: go-portfolio
-      VALUES_FILE: ""
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Set kubeconfig for EKS
-        run: |
-          aws eks update-kubeconfig \
-            --region "${AWS_REGION}" \
-            --name "${EKS_CLUSTER_NAME}"
-
-      - name: Setup Helm
-        uses: azure/setup-helm@v4
-
-      - name: Select environment values
-        run: |
-          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
-            echo "VALUES_FILE=helm/charts/values-dev.yaml" >> $GITHUB_ENV
-            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
-            echo "K8S_NAMESPACE=dev" >> $GITHUB_ENV
-            echo "RELEASE_NAME=go-portfolio-dev" >> $GITHUB_ENV
-
-          elif [[ ${GITHUB_REF} == refs/heads/release/* ]]; then
-            echo "VALUES_FILE=helm/charts/values-staging.yaml" >> $GITHUB_ENV
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-            echo "K8S_NAMESPACE=staging" >> $GITHUB_ENV
-            echo "RELEASE_NAME=go-portfolio-staging" >> $GITHUB_ENV
-
-          elif [[ ${GITHUB_REF} == refs/tags/v* ]]; then
-            echo "VALUES_FILE=helm/charts/values-prod.yaml" >> $GITHUB_ENV
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-            echo "K8S_NAMESPACE=production" >> $GITHUB_ENV
-            echo "RELEASE_NAME=go-portfolio-prod" >> $GITHUB_ENV
-
-          fi
-
-      - name: Deploy with Helm
-        run: |
-          set -euo pipefail
-          helm upgrade --install "${RELEASE_NAME}" ./helm/charts \
-            -f "${VALUES_FILE}" \
-            --namespace "${K8S_NAMESPACE}" \
-            --create-namespace \
-            --set image.repository="${DOCKER_USERNAME}/go-port" \
-            --set image.tag="${GITHUB_RUN_ID}" \
-            --set backendImage.repository="${DOCKER_USERNAME}/go-backend" \
-            --set backendImage.tag="${GITHUB_RUN_ID}"
-
-      - name: Verify rollout
-        run: |
-          set -euo pipefail
-
-          kubectl rollout status deployment/go-portfolio \
-            -n "${K8S_NAMESPACE}" \
-            --timeout=300s
-
-          kubectl rollout status deployment/go-backend \
-            -n "${K8S_NAMESPACE}" \
-            --timeout=300s
-
-  # Slack-Notification:
-  #   name: Slack Notification
-  #   runs-on: ubuntu-latest
-  #   needs:
-  #     - Application-build
-  #     - Helm-Validation
-  #     - Terraform-CI
-  #     - Docker-Image-Push
-  #     - Image-Scanning
-  #     - Updating-helm-tags
-  #     - Deploy-To-EKS
-  #   if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-  #   steps:
-  #     - name: Slack Notification
-  #       uses: act10ns/slack@v1
-  #       env:
-  #         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-  #       with:
-  #         status: ${{ job.status }}
-  #         steps: ${{ toJson(steps) }}
-  #         channel: "#go-app-github-actions"
+    Application-build:
+        name: Go App CI
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+
+        defaults:
+            run:
+                working-directory: app
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version-file: app/go.mod
+                  cache-dependency-path: app/go.sum
+
+            - name: Download dependencies
+              run: go mod download
+
+            - name: Format check
+              run: |
+                  files=$(gofmt -l .)
+                  if [ -n "$files" ]; then
+                    echo "Unformatted files:"
+                    echo "$files"
+                    exit 1
+                  fi
+
+            - name: Run tests
+              run: go test -v ./...
+
+            - name: Build Go app
+              run: go build -v ./...
+            - uses: actions/setup-go@v5
+              with:
+                  go-version-file: app/go.mod
+            - name: Run golangci-lint
+              uses: golangci/golangci-lint-action@v8
+              with:
+                  version: latest
+                  working-directory: app
+                  skip-cache: true
+
+            - name: Setup Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build Docker image
+              run: docker build -t go-port:ci .
+
+            - name: Run container
+              run: docker run -d --name go-port-test -p 8080:8080 go-port:ci
+
+            - name: E2E health check
+              run: |
+                  for i in {1..10}; do
+                    if curl -f http://localhost:8080/health && curl -f http://localhost:8080/ping; then
+                      echo "Health check passed"
+                      exit 0
+                    fi
+
+                    echo "Waiting for app to be ready..."
+                    sleep 3
+                  done
+
+                  echo "Health check failed"
+                  docker logs go-port-test
+                  exit 1
+
+            - name: Stop container
+              if: always()
+              run: docker rm -f go-port-test
+
+    Backend-build:
+        name: Backend CI
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+
+        defaults:
+            run:
+                working-directory: backend
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version-file: backend/go.mod
+                  cache-dependency-path: backend/go.sum
+
+            - name: Download dependencies
+              run: go mod download
+
+            - name: Run tests
+              run: go test -v ./...
+
+            - name: Build Go backend
+              run: go build -v ./...
+            - uses: actions/setup-go@v5
+              with:
+                  go-version-file: app/go.mod
+            - name: Run golangci-lint
+              uses: golangci/golangci-lint-action@v8
+              with:
+                  version: latest
+                  working-directory: app
+                  skip-cache: true
+            - name: Setup Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build Docker image
+              run: docker build -t go-backend:ci .
+
+            - name: Run container
+              run: docker run -d --name go-backend-test -p 8081:8080 go-backend:ci
+
+            - name: Backend health check
+              run: |
+                  for i in {1..10}; do
+                    if curl -f http://localhost:8081/ping; then
+                      echo "Health check passed"
+                      exit 0
+                    fi
+
+                    echo "Waiting for backend..."
+                    sleep 3
+                  done
+
+                  echo "Health check failed"
+                  docker logs go-backend-test
+                  exit 1
+
+            - name: Stop container
+              if: always()
+              run: docker rm -f go-backend-test
+
+    Helm-Validation:
+        name: Helm CI
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        needs:
+            - Application-build
+            - Backend-build
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Helm
+              uses: azure/setup-helm@v4
+
+            - name: Select Helm values file
+              run: |
+                  if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+                    echo "VALUES_FILE=values-prod.yaml" >> $GITHUB_ENV
+                  elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
+                    echo "VALUES_FILE=values-staging.yaml" >> $GITHUB_ENV
+                  else
+                    echo "VALUES_FILE=values-dev.yaml" >> $GITHUB_ENV
+                  fi
+            - name: Helm lint
+              run: |
+                  helm lint ./helm/charts \
+                    -f ./helm/charts/${VALUES_FILE}
+
+            - name: Helm template validate
+              run: |
+                  helm template go-app-platform ./helm/charts \
+                    -f ./helm/charts/${VALUES_FILE}
+
+    Terraform-CI:
+        name: Terraform CI
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+
+        needs:
+            - Application-build
+            - Backend-build
+
+        defaults:
+            run:
+                shell: bash
+                working-directory: infra/eks
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v3
+              with:
+                  terraform_version: 1.9.3
+                  terraform_wrapper: true
+
+            - name: Cache Terraform
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.terraform.d/plugin-cache
+                      infra/eks/.terraform
+                  key: ${{ runner.os }}-terraform-${{ hashFiles('infra/eks/**/*.tf') }}
+                  restore-keys: |
+                      ${{ runner.os }}-terraform-
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+                  aws-region: us-east-1
+            - name: Terraform Init
+              run: terraform init -reconfigure
+
+            - name: Terraform Format Check
+              run: terraform fmt -check -diff -recursive
+
+            - name: Terraform Validate
+              run: terraform validate
+
+            - name: Terraform Plan
+              run: terraform plan -lock=false -var-file=dev.tfvars -input=false
+
+    Docker-Image-Push:
+        name: Docker Image Push
+        runs-on: ubuntu-latest
+        needs:
+            - Application-build
+            - Helm-Validation
+            - Terraform-CI
+        if: github.event_name == 'push'
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Login to Dockerhub
+              uses: docker/login-action@v3
+              with:
+                  username: ${{ secrets.DOCKER_USERNAME }}
+                  password: ${{ secrets.DOCKER_PASSWORD }}
+
+            - name: Build and push
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./app
+                  file: ./app/Dockerfile
+                  push: true
+                  tags: ${{ secrets.DOCKER_USERNAME }}/go-port:${{ github.run_id }}
+
+    Backend-Docker-Push:
+        name: Backend Docker Push
+        runs-on: ubuntu-latest
+
+        needs:
+            - Backend-build
+            - Helm-Validation
+            - Terraform-CI
+
+        if: github.event_name == 'push'
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Login to Dockerhub
+              uses: docker/login-action@v3
+              with:
+                  username: ${{ secrets.DOCKER_USERNAME }}
+                  password: ${{ secrets.DOCKER_PASSWORD }}
+
+            - name: Build and push backend
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./backend
+                  file: ./backend/Dockerfile
+                  push: true
+                  tags: ${{ secrets.DOCKER_USERNAME }}/go-backend:${{ github.run_id }}
+
+    Image-Scanning:
+        name: Image Scanning
+        runs-on: ubuntu-latest
+        needs:
+            - Docker-Image-Push
+            - Backend-Docker-Push
+        if: github.event_name == 'push'
+
+        steps:
+            - name: Login to Dockerhub
+              uses: docker/login-action@v3
+              with:
+                  username: ${{ secrets.DOCKER_USERNAME }}
+                  password: ${{ secrets.DOCKER_PASSWORD }}
+
+            - name: Docker Scout
+              uses: docker/scout-action@v1
+              with:
+                  command: cves
+                  image: ${{ secrets.DOCKER_USERNAME }}/go-backend:${{ github.run_id }}
+                  ignore-unchanged: true
+                  only-severities: critical,high
+                  write-comment: false
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Scan app image
+              uses: docker/scout-action@v1
+              with:
+                  command: cves
+                  image: ${{ secrets.DOCKER_USERNAME }}/go-port:${{ github.run_id }}
+                  ignore-unchanged: true
+                  only-severities: critical,high
+                  write-comment: false
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+
+    # Updating-helm-tags:
+    #   name: Updating Helm Tags
+    #   runs-on: ubuntu-latest
+    #   needs: Image-Scanning
+    #   if: github.event_name == 'push'
+
+    #   steps:
+    #     - name: Clone same repo
+    #       run: |
+    #         git clone https://${{ secrets.REPO_PAT }}@github.com/Duanghathai-kaew/cs365-devops-capstone.git
+    #         cd cs365-devops-capstone
+
+    #     - name: Updating values in helm
+    #       run: |
+    #         cd cs365-devops-capstone
+    #         sed -i 's/tag: .*/tag: "${{ github.run_id }}"/' helm/charts/values.yaml
+    #         echo "Updated helm/charts/values.yaml with tag: ${{ github.run_id }}"
+
+    #     - name: Pushing changes
+    #       run: |
+    #         cd cs365-devops-capstone
+    #         git config user.email "github-actions@github.com"
+    #         git config user.name "github-actions"
+    #         git add helm/charts/values.yaml
+    #         git commit -m "update image tag ${{ github.run_id }} [skip ci]" || echo "no changes"
+    #         git push https://${{ secrets.REPO_PAT }}@github.com/Duanghathai-kaew/cs365-devops-capstone.git HEAD:main
+
+    Deploy-To-EKS:
+        name: Deploy to EKS with Helm
+        runs-on: ubuntu-latest
+        needs: Image-Scanning
+        if: github.event_name == 'push'
+
+        env:
+            DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+            AWS_REGION: us-east-1
+            EKS_CLUSTER_NAME: dev-ap-medium-eks-cluster
+            # K8S_NAMESPACE: go-app
+            # RELEASE_NAME: go-portfolio
+            VALUES_FILE: ""
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+                  aws-region: ${{ env.AWS_REGION }}
+
+            - name: Validate AWS credentials
+              run: |
+                  echo "Validating AWS credentials..."
+                  aws sts get-caller-identity
+                  if [ $? -ne 0 ]; then
+                    echo "ERROR: AWS credentials validation failed"
+                    exit 1
+                  fi
+                  echo "✓ AWS credentials valid"
+
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v3
+              with:
+                  terraform_version: 1.9.3
+
+            - name: Terraform Init
+              working-directory: infra/eks
+              run: terraform init
+
+            - name: Terraform Apply
+              working-directory: infra/eks
+              run: |
+                  set -euo pipefail
+                  echo "Applying Terraform configuration..."
+                  terraform apply -auto-approve -var-file=dev.tfvars -lock=false
+                  if [ $? -ne 0 ]; then
+                    echo "ERROR: Terraform apply failed"
+                    exit 1
+                  fi
+                  echo "✓ Terraform apply completed"
+              continue-on-error: false
+
+            - name: Set kubeconfig for EKS
+              run: |
+                  echo "Verifying EKS cluster exists..."
+                  aws eks describe-cluster \
+                    --name "${EKS_CLUSTER_NAME}" \
+                    --region "${AWS_REGION}" > /dev/null 2>&1
+                  if [ $? -ne 0 ]; then
+                    echo "ERROR: EKS cluster ${EKS_CLUSTER_NAME} not found in region ${AWS_REGION}"
+                    exit 1
+                  fi
+                  echo "✓ EKS cluster ${EKS_CLUSTER_NAME} found"
+
+                  echo "Setting kubeconfig..."
+                  aws eks update-kubeconfig \
+                    --region "${AWS_REGION}" \
+                    --name "${EKS_CLUSTER_NAME}"
+                  echo "✓ kubeconfig updated"
+
+            - name: Setup Helm
+              uses: azure/setup-helm@v4
+
+            - name: Select environment values
+              run: |
+                  if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+                    echo "VALUES_FILE=helm/charts/values-prod.yaml" >> $GITHUB_ENV
+                    echo "ENVIRONMENT=production" >> $GITHUB_ENV
+                    echo "K8S_NAMESPACE=production" >> $GITHUB_ENV
+                    echo "RELEASE_NAME=go-portfolio-prod" >> $GITHUB_ENV
+
+                  elif [[ "${GITHUB_REF}" == refs/heads/release/* ]]; then
+                    echo "VALUES_FILE=helm/charts/values-staging.yaml" >> $GITHUB_ENV
+                    echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+                    echo "K8S_NAMESPACE=staging" >> $GITHUB_ENV
+                    echo "RELEASE_NAME=go-portfolio-staging" >> $GITHUB_ENV
+
+                  else
+                    echo "VALUES_FILE=helm/charts/values-dev.yaml" >> $GITHUB_ENV
+                    echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+                    echo "K8S_NAMESPACE=dev" >> $GITHUB_ENV
+                    echo "RELEASE_NAME=go-portfolio-dev" >> $GITHUB_ENV
+                  fi
+
+            - name: Deploy with Helm
+              env:
+                  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+
+              run: |
+                  set -euo pipefail
+
+                  helm upgrade --install "${RELEASE_NAME}" ./helm/charts \
+                    -f "${VALUES_FILE}" \
+                    --namespace "${K8S_NAMESPACE}" \
+                    --create-namespace \
+                    --set image.repository="${DOCKER_USERNAME}/go-port" \
+                    --set image.tag="${GITHUB_RUN_ID}" \
+                    --set backendImage.repository="${DOCKER_USERNAME}/go-backend" \
+                    --set backendImage.tag="${GITHUB_RUN_ID}"
+            - name: Verify rollout
+              run: |
+                  set -euo pipefail
+
+                  kubectl rollout status deployment/go-portfolio \
+                    -n "${K8S_NAMESPACE}" \
+                    --timeout=300s
+
+                  kubectl rollout status deployment/go-backend \
+                    -n "${K8S_NAMESPACE}" \
+                    --timeout=300s
+
+    # Slack-Notification:
+    #   name: Slack Notification
+    #   runs-on: ubuntu-latest
+    #   needs:
+    #     - Application-build
+    #     - Helm-Validation
+    #     - Terraform-CI
+    #     - Docker-Image-Push
+    #     - Image-Scanning
+    #     - Updating-helm-tags
+    #     - Deploy-To-EKS
+    #   if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    #   steps:
+    #     - name: Slack Notification
+    #       uses: act10ns/slack@v1
+    #       env:
+    #         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    #       with:
+    #         status: ${{ job.status }}
+    #         steps: ${{ toJson(steps) }}
+    #         channel: "#go-app-github-actions"
