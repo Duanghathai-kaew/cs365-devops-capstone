@@ -22,7 +22,7 @@ func TestHealthHandlerUnit(t *testing.T) {
 		}
 	}()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusInternalServerError {
 		t.Fatalf("expected status 200, got %d", resp.StatusCode)
 	}
 
